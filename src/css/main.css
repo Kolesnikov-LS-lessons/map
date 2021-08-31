@@ -79,3 +79,6 @@ h2{
 .review_wrapper span:first-of-type{
     color: #000;
 }
+.reviews_carousel .reviews_block{
+    max-height: 140px;
+}

@@ -10,7 +10,17 @@ export function initMap() {
         let currentCoords = false
         const
             myPoints = {},
-            cluster = new ymaps.Clusterer(),
+            cluster = new ymaps.Clusterer({
+                preset: 'islands#redClusterIcons',
+                clusterDisableClickZoom: true,
+                clusterOpenBalloonOnClick: true,
+                clusterBalloonContentLayout: 'cluster#balloonCarousel',
+                clusterBalloonItemContentLayout: ymaps.templateLayoutFactory.createClass(
+                    '<div class="reviews_carousel" data-id="{{ properties.idForGeoObj }}">' +
+                    '{{ properties.myFeeds|raw }}' +
+                    '</div>'
+                )
+            }),
             myMap = new ymaps.Map('map', {
                 center: [52.373057, 4.892557],
                 zoom: 12,
@@ -27,6 +37,7 @@ export function initMap() {
         })
 
         const openBalloon = (e, reviews = {}) => {
+            console.log(reviews);
             const properties = {
                 contentBody: balloonBody(),
                 contentHeader: reviews.reviewsArr ? balloonHeader(reviews.reviewsArr) : false
