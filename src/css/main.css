@@ -60,7 +60,7 @@ h2{
     background-color: #ef5225;
 }
 .reviews_block{
-    margin: 20px 0 10px;
+    margin: 10px 0;
     max-height: 70px;
     overflow: scroll;
     border-bottom: 1px solid #E7E7E7;
@@ -81,4 +81,7 @@ h2{
 }
 .reviews_carousel .reviews_block{
     max-height: 140px;
+}
+.reviews_carousel h4{
+    cursor: pointer;
 }

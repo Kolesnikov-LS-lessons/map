@@ -1,8 +1,10 @@
 import renderForm from '../templates/form.hbs';
 import renderReviews from '../templates/reviews.hbs';
+import renderReviewsAddress from '../templates/reviews_address.hbs';
 
 export function initMap() {
     let allFeeds = (localStorage.feedsData) ? JSON.parse(localStorage.feedsData) : {};
+    const balloonHeaderAddress = address => renderReviewsAddress(address);
     const balloonHeader = reviewsArr => renderReviews({ reviewsArr });
     const balloonBody = () => renderForm();
 
@@ -29,6 +31,7 @@ export function initMap() {
 
         myMap.geoObjects.add(cluster);
         myMap.events.add('click', e => myMap.balloon.isOpen() ? myMap.balloon.close() : openBalloon(e));
+
         document.addEventListener('submit', e => {
             if (e.target.classList.contains('review_form')) {
                 e.preventDefault();
@@ -37,14 +40,23 @@ export function initMap() {
         })
 
         const openBalloon = (e, reviews = {}) => {
-            console.log(reviews);
-            const properties = {
-                contentBody: balloonBody(),
-                contentHeader: reviews.reviewsArr ? balloonHeader(reviews.reviewsArr) : false
-            };
-
             currentCoords = reviews.coords || e.get('coords')
-            myMap.balloon.open(currentCoords, properties)
+            ymaps.geocode(currentCoords).then(function (res) {
+                const firstGeoObject = res.geoObjects.get(0),
+                    properties = {
+                        contentBody: balloonBody(),
+                        contentHeader:
+                            reviews.reviewsArr ?
+                                balloonHeaderAddress({
+                                    line: firstGeoObject.getAddressLine(),
+                                    coords: currentCoords.join(',')
+                                }) + balloonHeader(reviews.reviewsArr) :
+                                false
+                    };
+
+                myMap.balloon.open(currentCoords, properties)
+            });
+
         }
 
         const addNewReview = (form, coords) => {
@@ -69,21 +81,52 @@ export function initMap() {
         }
 
         const addPlaceMark = (coords, reviewsArr) => {
-            const myPlaceMark = new ymaps.Placemark(
-                coords, { myFeeds: balloonHeader(reviewsArr) }, { preset: 'islands#redIcon' }
-            )
+            ymaps.geocode(coords).then(function (res) {
+                const firstGeoObject = res.geoObjects.get(0),
+                    myPlaceMark = new ymaps.Placemark(
+                        coords,
+                        { myFeeds: balloonHeaderAddress({
+                            line: firstGeoObject.getAddressLine(),
+                            coords: coords
+                        }) + balloonHeader(reviewsArr) },
+                        { preset: 'islands#redIcon' }
+                    )
 
-            myPlaceMark.events.add('click', e => openBalloon(e, { coords, reviewsArr }))
-            myPoints[coords] = myPlaceMark
-            cluster.add(myPlaceMark)
-            if (reviewsArr.length > 1) {
-                updatePlaceMark(myPlaceMark, reviewsArr.length)
-            }
+                myPoints[coords] = myPlaceMark
+                cluster.add(myPlaceMark)
+                if (reviewsArr.length > 1) {
+                    updatePlaceMark(myPlaceMark, reviewsArr.length)
+                }
+            });
+
         }
 
         for (const geo of Object.keys(allFeeds)) {
             addPlaceMark(geo.split(','), allFeeds[geo])
         }
+
+        myMap.geoObjects.events.add('click', e => {
+            if (e.get('target').options._name && e.get('target').options._name === 'geoObject') {
+                const coords = e.get('target').geometry.getCoordinates();
+
+                openBalloon(myPoints[coords.join(',')], {
+                    coords: coords,
+                    reviewsArr: allFeeds[coords.join(',')]
+                })
+            }
+        });
+
+        document.addEventListener('click', e => {
+            if (e.target.tagName === 'H4' && e.target.parentNode.classList.contains('reviews_carousel')) {
+                const clickCoords = e.target.getAttribute('data-coords');
+
+                myMap.balloon.close();
+                openBalloon(myPoints[clickCoords], {
+                    coords: clickCoords.split(','),
+                    reviewsArr: allFeeds[clickCoords]
+                })
+            }
+        })
 
     })
 }
